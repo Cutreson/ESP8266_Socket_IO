@@ -1,5 +1,4 @@
 var express = require("express");
-const res = require("express/lib/response");
 var app = express();
 app.use(express.static("public"));
 app.set("view engine", "ejs");
@@ -10,11 +9,10 @@ var io = require("socket.io")(server);
 const PORT = process.env.PORT || 3000;
 server.listen(PORT);
 
-io.on("connection", function(socket){
-
-
+io.on("connection", function(socket) {
+    console.log("COnnection");
 });
 
-app.get("/", function(req, res){
+app.get("/", function(req, res) {
     res.render("Home");
 });

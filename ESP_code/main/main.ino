@@ -1,55 +1,57 @@
-#include <ESP8266WiFi.h>                // Thư viện dùng để kết nối WiFi của ESP8266
-#include <WebSocketsClient.h>           // Thư viện WebSocketsClient
-const char* ssid = "SUNHOUSENM";         // Tên của mạng WiFi mà bạn muốn kết nối đến
-const char* password = "Shg@2021";   // Mật khẩu của mạng WiFi
-const int led = 15;                      // Đèn led ở chân GPIO2
+#include <Arduino.h>
+#include <ESP8266WiFi.h>
+#include <WebSocketsClient.h> //https://github.com/Links2004/arduinoWebSockets
 WebSocketsClient webSocket;
+const char* ssid = "SCKT"; //Đổi thành wifi của bạn
+const char* password = "huhu123"; //Đổi pass luôn
+const char* ip_host = "192.168.1.150"; //Đổi luôn IP host của PC nha
+const uint16_t port = 3000; //Port thích đổi thì phải đổi ở server nữa
+const int LED = 2;
+const int BTN = 0;
+void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
+  switch (type) {
+    case WStype_DISCONNECTED:
+      Serial.printf("[WSc] Disconnected!\n");
+      break;
+    case WStype_CONNECTED:
+      {
+        Serial.printf("[WSc] Connected to url: %s\n", payload);
+      }
+      break;
+    case WStype_TEXT:
+      Serial.printf("[WSc] get text: %s\n", payload);
+      if (strcmp((char*)payload, "LED_ON") == 0) {
+        digitalWrite(LED, 0); // Khi client phát sự kiện "LED_ON" thì server sẽ bật LED
+      } else if (strcmp((char*)payload, "LED_OFF") == 0) {
+        digitalWrite(LED, 1); // Khi client phát sự kiện "LED_OFF" thì server sẽ tắt LED
+      }
+      break;
+    case WStype_BIN:
+      Serial.printf("[WSc] get binary length: %u\n", length);
+      break;
+  }
+}
 void setup() {
-  Serial.begin(115200);                 // Khởi tạo kết nối Serial để truyền dữ liệu đến máy tính
-  pinMode(led, OUTPUT);
-  startWiFi();
-  connectWebSocket();
+  pinMode(LED, OUTPUT);
+  pinMode(BTN, INPUT);
+  Serial.begin(115200);
+  Serial.println("ESP8266 Websocket Client");
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  webSocket.begin(ip_host, port);
+  webSocket.onEvent(webSocketEvent);
 }
 void loop() {
   webSocket.loop();
-}
-void startWiFi() {
-  WiFi.begin(ssid, password);           // Kết nối vào mạng WiFi
-  Serial.print("Connecting to ");
-  Serial.print(ssid);
-  // Chờ kết nối WiFi được thiết lập
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.print(".");
-  }
-  Serial.println("\n");
-  Serial.println("Connection established!");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP());       // Gởi địa chỉ IP đến máy tinh
-}
-void connectWebSocket() {
-  webSocket.begin("172.16.4.223", 3000, "/");          // Địa chỉ websocket server, port và URL
-  webSocket.onEvent(webSocketEvent);
-  // webSocket.setAuthorization("user", "password");        // Sử dụng thông tin chứng thực nếu cần
-  webSocket.setReconnectInterval(5000);                     // Thử lại sau 5s nếu kết nối không thành công
-}
-void webSocketEvent(WStype_t type, uint8_t * payload, size_t length) {
-  switch (type) {
-    case WStype_DISCONNECTED:                         // Sự kiện khi client ngắt kết nối
-      Serial.printf("[WSc] Disconnected!\n");
-      break;
-    case WStype_CONNECTED:                            // Sự kiện khi client kết nối
-      Serial.printf("[WSc] Connected to url: %s\n", payload);
-      webSocket.sendTXT("Connected");          // Thông báo kết nối thành công
-      break;
-    case WStype_TEXT:                                 // Sự kiện khi nhận được thông điệp dạng TEXT
-      Serial.printf("[WSc] get text: %s\n", payload);
-      webSocket.sendTXT("Hi Server!");               // Gởi thông điệp đến server
-      break;
-    case WStype_BIN:                                  // Sự kiện khi nhận được thông điệp dạng BINARY
-      Serial.printf("[WSc] get binary length: %u\n", length);
-      hexdump(payload, length);
-      // webSocket.sendBIN(payload, length);
-      break;
+  static bool isPressed = false;
+  if (!isPressed && digitalRead(BTN) == 0) { //Nhấn nút nhấn GPIO0
+    isPressed = true;
+    webSocket.sendTXT("BTN_PRESSED");
+  } else if (isPressed && digitalRead(BTN)) { //Nhả nút nhấn GPIO0
+    isPressed = false;
+    webSocket.sendTXT("BTN_RELEASE");
   }
 }
