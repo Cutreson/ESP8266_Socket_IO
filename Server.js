@@ -1,5 +1,4 @@
 var express = require("express");
-const res = require("express/lib/response");
 var app = express();
 app.use(express.static("public"));
 app.use(express.static(__dirname + "/node_modules"));
@@ -46,4 +45,6 @@ io.on("connection", function(socket) {
 });
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT);
+server.listen(PORT, () => {
+    console.log("Server is up and running on port : " + PORT);
+});
